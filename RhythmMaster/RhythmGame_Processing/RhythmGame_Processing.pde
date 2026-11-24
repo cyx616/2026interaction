@@ -3,6 +3,8 @@ import processing.sound.*;
 import processing.serial.*;
 import java.util.ArrayList;
 
+SoundFile[] piano = new SoundFile[4];
+
 // =====================================
 // 音樂節奏挑戰 - 淺藍色版本
 // Processing 4.3 + Maker UNO
@@ -21,6 +23,11 @@ Amplitude analyzer;
 // Maker UNO
 Serial myPort;
 boolean arduinoReady = false;
+
+// Arduino 搖桿傳來的控制狀態
+int musicMode = 1;
+int musicVolume = 100;
+boolean accompanimentEnabled = false;
 
 // 遊戲狀態
 // 0 = 音樂載入失敗
@@ -106,8 +113,11 @@ void setup() {
   size(800, 620);
   frameRate(60);
   textAlign(CENTER, CENTER);
+  piano[0] = new SoundFile(this, "DO.wav");
+  piano[1] = new SoundFile(this, "RE.wav");
+  piano[2] = new SoundFile(this, "MI.wav");
+  piano[3] = new SoundFile(this, "SOL.wav");
 
-  // Windows 中文字型
   PFont chineseFont =
     createFont("Microsoft JhengHei", 32);
 
@@ -141,6 +151,9 @@ void setup() {
 
       arduinoReady = true;
 
+      // 接收 Arduino 傳來的完整指令
+      myPort.bufferUntil('\n');
+
       println("Arduino Port: " + chosenPort);
 
       sendArduino('X');
@@ -171,6 +184,8 @@ void loadMusic() {
     analyzer = new Amplitude(this);
     analyzer.input(music);
 
+    music.amp(musicVolume / 100.0);
+
     songName = "music.mp3";
     state = 1;
 
@@ -188,7 +203,19 @@ void loadMusic() {
 }
 
 // =====================================
-// 3. 畫面控制
+// 3. 新增鋼琴播放函式
+// =====================================
+void playPiano(int lane) {
+  if (lane >= 0 && lane < 4 &&
+      piano[lane] != null) {
+
+    piano[lane].stop();
+    piano[lane].play();
+  }
+}
+
+// =====================================
+// 4. 畫面控制
 // =====================================
 
 void draw() {
@@ -209,6 +236,7 @@ void draw() {
 
     fill(subTextColor);
     textSize(18);
+
     text(
       "目前歌曲：" + songName,
       width/2, 390
@@ -242,7 +270,7 @@ void draw() {
 }
 
 // =====================================
-// 4. 開始畫面
+// 5. 開始畫面
 // =====================================
 
 void showMenu(
@@ -259,12 +287,14 @@ void showMenu(
 
   fill(subTextColor);
   textSize(19);
+
   text(
     "使用 A、S、D、F 鍵擊打音符",
     width/2, 335
   );
 
   textSize(17);
+
   text(
     "遊戲前請切換為英文輸入法",
     width/2, 465
@@ -272,7 +302,7 @@ void showMenu(
 }
 
 // =====================================
-// 5. 開始遊戲
+// 6. 開始遊戲
 // =====================================
 
 void startGame() {
@@ -334,6 +364,7 @@ void startGame() {
 
   music.stop();
   music.cue(0);
+  music.amp(musicVolume / 100.0);
   music.play();
 
   state = 2;
@@ -342,7 +373,7 @@ void startGame() {
 }
 
 // =====================================
-// 6. 遊戲時間
+// 7. 遊戲時間
 // =====================================
 
 int gameTime() {
@@ -356,7 +387,7 @@ int gameTime() {
 }
 
 // =====================================
-// 7. 更新遊戲
+// 8. 更新遊戲
 // =====================================
 
 void updateGame() {
@@ -380,13 +411,25 @@ void updateGame() {
 }
 
 // =====================================
-// 8. 繪製遊戲畫面
+// 9. 繪製遊戲畫面
 // =====================================
 
 void drawGame() {
   int t = gameTime();
 
   background(bgColor);
+
+  // 顯示搖桿控制狀態
+  fill(subTextColor);
+  textSize(14);
+
+  text(
+    "模式 M" + musicMode +
+    "  |  音量 " + musicVolume +
+    "  |  智慧伴奏 " +
+    (accompanimentEnabled ? "開啟" : "關閉"),
+    width/2, 65
+  );
 
   // 分數
   fill(mainTextColor);
@@ -489,6 +532,7 @@ void drawGame() {
     }
 
     textSize(35);
+
     text(
       judgeText,
       width/2, 590
@@ -558,6 +602,7 @@ void hitNote(int lane) {
   }
 
   maxCombo = max(maxCombo, combo);
+  playPiano(lane);
 }
 
 // =====================================
@@ -617,6 +662,61 @@ void updateMusicLights() {
 // 12. Arduino 通訊
 // =====================================
 
+// 接收 Arduino 搖桿傳來的完整指令
+// 例如 M1、V80、B1
+
+void serialEvent(Serial port) {
+  String message = port.readStringUntil('\n');
+
+  if (message == null) return;
+
+  message = trim(message);
+
+  if (message.length() == 0) return;
+
+  println("Arduino -> Processing: " + message);
+
+  // 音樂模式
+  if (message.equals("M0")) {
+    musicMode = 0;
+  }
+  else if (message.equals("M1")) {
+    musicMode = 1;
+  }
+  else if (message.equals("M2")) {
+    musicMode = 2;
+  }
+
+  // 音量 V0～V100
+  else if (message.startsWith("V")) {
+    String valueText = message.substring(1);
+
+    try {
+      int newVolume = int(valueText);
+
+      musicVolume = constrain(
+        newVolume, 0, 100
+      );
+
+      if (music != null) {
+        music.amp(musicVolume / 100.0);
+      }
+    }
+    catch (Exception e) {
+      println("音量指令格式錯誤：" + message);
+    }
+  }
+
+  // 智慧伴奏開關
+  else if (message.equals("B1")) {
+    accompanimentEnabled = true;
+  }
+  else if (message.equals("B0")) {
+    accompanimentEnabled = false;
+  }
+}
+
+// 傳送指令給 Arduino
 void sendArduino(char command) {
   if (arduinoReady &&
       myPort != null) {
@@ -730,8 +830,7 @@ void showResult() {
 
 void keyPressed() {
 
-  // Enter 開始
-  // 額外支援 P 作為備用
+  // Enter 開始 / 重新挑戰
   if (keyCode == 10 ||
       keyCode == 13 ||
       key == ENTER ||
@@ -759,8 +858,7 @@ void keyPressed() {
     }
 
     else if (state == 3) {
-      pausedTotal +=
-        millis() - pauseStart;
+      pausedTotal += millis() - pauseStart;
 
       music.play();
       state = 2;
@@ -769,21 +867,23 @@ void keyPressed() {
     return;
   }
 
+  // 只有遊戲進行中才接受 A、S、D、F
   if (state != 2) return;
 
-  char k =
-    Character.toLowerCase(key);
+  char k = Character.toLowerCase(key);
 
-  // A S D F 按鍵
+  // A、S、D、F 按鍵
   for (int i = 0; i < 4; i++) {
+
     if (k == keys[i]) {
 
+      // 跑道閃爍
       keyFlashTime[i] = millis();
 
-      // Maker UNO 按鍵音效
-      sendArduino(k);
+      // 顯示按鍵偵測結果，方便除錯
+      println("偵測到按鍵：" + k);
 
-      // 判斷是否擊中
+      // 執行音符判定及鋼琴音效
       hitNote(i);
 
       break;
