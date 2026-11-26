@@ -1,86 +1,116 @@
-
 import processing.sound.*;
 import processing.serial.*;
 import java.util.ArrayList;
 
-SoundFile[] piano = new SoundFile[4];
+// ============================================
+// 音速節拍 - 8-BIT RHYTHM GAME
+// 修正版：黑畫面排除、中文介面、手動計分
+// ============================================
 
-// =====================================
-// 音樂節奏挑戰 - 淺藍色版本
-// Processing 4.3 + Maker UNO
-//
-// Enter：開始遊戲 / 重新挑戰
-// A S D F：擊打音符
-// Space：暫停 / 繼續
-//
-// 音樂：data/music.mp3
-// =====================================
+// 基準設計尺寸
+final int DESIGN_W = 960;
+final int DESIGN_H = 700;
 
-// 音樂
-SoundFile music;
-Amplitude analyzer;
-
-// Maker UNO
-Serial myPort;
+// Arduino
+String preferredPort = "COM3";
+Serial port;
 boolean arduinoReady = false;
 
-// Arduino 搖桿傳來的控制狀態
-int musicMode = 1;
-int musicVolume = 100;
-boolean accompanimentEnabled = false;
-
-// 遊戲狀態
-// 0 = 音樂載入失敗
-// 1 = 準備開始
-// 2 = 遊戲中
-// 3 = 暫停
-// 4 = 遊戲結束
-int state = 0;
-
-// =====================================
-// 淺藍色主題
-// =====================================
-
-color bgColor = #EAF7FF;
-color panelColor = #D9F0FF;
-color panelBorderColor = #B9DDF2;
-
-color titleColor = #4A90C2;
-color mainTextColor = #3B6F91;
-color subTextColor = #6E9FBE;
-
-color hitLineColor = #4A9DD8;
-color perfectColor = #2387BC;
-color goodColor = #598FC5;
-color missColor = #C77B91;
-
-char[] keys = {'a', 's', 'd', 'f'};
-
-color[] laneColors = {
-  #8ED8F8,
-  #CDB4F6,
-  #FFD6A5,
-  #B7EFC5
+// 音樂模式
+String[] patchNames = {
+  "25% 脈衝波",
+  "柔和三角波",
+  "街機鋸齒波"
 };
 
-// =====================================
-// 遊戲設定
-// =====================================
+String[] patchFiles = {
+  "lead_pulse.wav",
+  "lead_triangle.wav",
+  "lead_saw.wav"
+};
 
-float hitY = 465;
+char[] laneKeys = {'a', 's', 'd', 'f'};
 
-int travelTime = 1600;
-int noteInterval = 550;
+color[] neon = {
+  #00E9F4,
+  #F872FA,
+  #FFE16E,
+  #81F797
+};
+
+// 背景音樂
+SoundFile[] leads = new SoundFile[3];
+SoundFile bass, arp, drums;
+
+float[] leadMix = {0, 0, 0};
+float bassMix = 0;
+float arpMix = 0;
+float drumMix = 0;
+
+// 電子按鍵音效
+Pulse[] pulseVoices = new Pulse[4];
+TriOsc[] triangleVoices = new TriOsc[4];
+SawOsc[] sawVoices = new SawOsc[4];
+
+int[] hitAt = {-9999, -9999, -9999, -9999};
+int[] hitFlash = {-9999, -9999, -9999, -9999};
+
+int patchMode = 0;
+int musicVolume = 60;
+
+boolean accompanimentEnabled = true;
+boolean tracksStarted = false;
+boolean assetsLoaded = false;
+boolean voicesReady = false;
+
+// ============================================
+// 啟動階段
+// ============================================
+
+// 0：顯示載入畫面
+// 1：載入音樂與譜面
+// 2：初始化電子音效
+// 3：連接 Arduino
+// 4：進入正式畫面
+int initPhase = 0;
+
+String initStatus = "正在啟動音速節拍...";
+boolean audioUpdateErrorShown = false;
+
+// 遊戲狀態
+// 0：錯誤
+// 1：選單
+// 2：遊玩
+// 3：暫停
+// 4：結算
+
+int state = 1;
+String errorMessage = "";
+
+String songTitle = "8-BIT POP";
+String sourceMidi = "";
+
+float bpm = 125.0f;
+int durationMs = 32000;
+
+// 譜面
+ArrayList<RhythmNote> sourceNotes =
+  new ArrayList<RhythmNote>();
 
 ArrayList<RhythmNote> notes =
   new ArrayList<RhythmNote>();
 
-int gameStart = 0;
-int pauseStart = 0;
-int pausedTotal = 0;
-int lastNoteTime = 0;
+String[] difficultyNames = {
+  "EASY", "NORMAL", "HARD"
+};
 
-// 成績
+int[] noteGapsMs = {
+  720, 480, 240
+};
+
+int difficulty = 0;
+
+// 計分
 int score = 0;
 int combo = 0;
 int maxCombo = 0;
@@ -89,226 +119,767 @@ int perfectCount = 0;
 int goodCount = 0;
 int missCount = 0;
 
-// 判定顯示
-String judgeText = "";
-int judgeTime = -9999;
+int gameStart;
+int pauseStart;
+int pausedTotal;
 
-// 按鍵視覺回饋
-int[] keyFlashTime = {
-  -9999, -9999, -9999, -9999
-};
+// 音符下落
+int preRollMs = 2600;
+int travelTimeMs = 2400;
 
-// 流水燈
+final int PERFECT_WINDOW_MS = 150;
+final int GOOD_WINDOW_MS = 350;
+final int HIT_WINDOW_MS = GOOD_WINDOW_MS;
+
+// 軌道位置
+final int TRACK_X = 150;
+final int TRACK_W = 157;
+final int TRACK_TOP = 194;
+final int TRACK_BOTTOM = 615;
+
+// 打擊效果
+int judgeLane = -1;
+int lastGain = 0;
+
+int[] tapFlash = {-9999, -9999, -9999, -9999};
+int[] laneJudgeTime = {-9999, -9999, -9999, -9999};
+
+String[] laneJudge = {"", "", "", ""};
+
+int emptyTapCount = 0;
+int[] bestScores = {0, 0, 0};
+
 int lastLedSend = 0;
-float smoothLevel = 0;
-float peakLevel = 0.02;
 
-String songName = "music.mp3";
+String judgeText = "";
+int judgeAt = -9999;
 
-// =====================================
-// 1. 初始化
-// =====================================
+// 字型
+PFont arcadeFont;
+PFont zhFont;
+
+
+// ============================================
+// 1. Processing 初始化
+// ============================================
+
+void settings() {
+
+  // 改用預設 Java2D
+  // 不再使用 P2D
+  size(DESIGN_W, DESIGN_H);
+
+  noSmooth();
+}
+
 
 void setup() {
-  size(800, 620);
+
+  surface.setResizable(true);
+
   frameRate(60);
+  rectMode(CORNER);
   textAlign(CENTER, CENTER);
-  piano[0] = new SoundFile(this, "DO.wav");
-  piano[1] = new SoundFile(this, "RE.wav");
-  piano[2] = new SoundFile(this, "MI.wav");
-  piano[3] = new SoundFile(this, "SOL.wav");
 
-  PFont chineseFont =
-    createFont("Microsoft JhengHei", 32);
+  try {
 
-  textFont(chineseFont);
+    arcadeFont =
+      createFont("Consolas", 28, true);
 
-  // 尋找 Maker UNO 序列埠
+    zhFont =
+      createFont("Microsoft JhengHei", 22, true);
+
+  } catch (Exception e) {
+
+    println("字型初始化失敗：" + e.getMessage());
+
+    arcadeFont =
+      createFont("Monospaced", 28, true);
+
+    zhFont =
+      createFont("SansSerif", 22, true);
+  }
+
+  // 音效及 Arduino 移到載入階段
+  // 不在 setup() 一開始全部執行
+
+  println("SETUP COMPLETE");
+  println("準備開始載入遊戲資源...");
+}
+
+
+// ============================================
+// 2. 初始化電子音效
+// ============================================
+
+void initVoices() {
+
+  for (int i = 0; i < 4; i++) {
+
+    pulseVoices[i] = new Pulse(this);
+    pulseVoices[i].play(440, 0);
+    pulseVoices[i].width(0.25f);
+
+    triangleVoices[i] = new TriOsc(this);
+    triangleVoices[i].play(440, 0);
+
+    sawVoices[i] = new SawOsc(this);
+    sawVoices[i].play(440, 0);
+  }
+}
+
+
+// ============================================
+// 3. 載入音樂與譜面
+// ============================================
+
+boolean loadAssets() {
+
+  try {
+
+    JSONObject map = loadJSONObject("beatmap.json");
+
+    if (map == null) {
+      throw new RuntimeException(
+        "找不到 beatmap.json"
+      );
+    }
+
+    songTitle = map.getString("title");
+    sourceMidi = map.getString("source");
+    bpm = map.getFloat("bpm");
+    durationMs = map.getInt("durationMs");
+
+    JSONArray items = map.getJSONArray("notes");
+
+    sourceNotes.clear();
+
+    for (int i = 0; i < items.size(); i++) {
+
+      JSONObject n = items.getJSONObject(i);
+
+      sourceNotes.add(
+        new RhythmNote(
+          constrain(n.getInt("lane"), 0, 3),
+          n.getInt("startMs"),
+          n.getInt("pitch")
+        )
+      );
+    }
+
+    if (sourceNotes.size() == 0) {
+      throw new RuntimeException(
+        "譜面內沒有可用音符"
+      );
+    }
+
+    java.util.Collections.sort(
+      sourceNotes,
+      new java.util.Comparator<RhythmNote>() {
+
+        public int compare(
+          RhythmNote a,
+          RhythmNote b
+        ) {
+          return Integer.compare(
+            a.hitTime,
+            b.hitTime
+          );
+        }
+      }
+    );
+
+    buildChart();
+
+    for (int i = 0; i < 3; i++) {
+
+      leads[i] =
+        new SoundFile(this, patchFiles[i]);
+    }
+
+    bass = new SoundFile(this, "bass.wav");
+    arp = new SoundFile(this, "arp.wav");
+    drums = new SoundFile(this, "drums.wav");
+
+    println("音樂載入成功！");
+    println("音符數量：" + notes.size());
+
+    return true;
+
+  } catch (Exception e) {
+
+    errorMessage = e.getMessage();
+
+    println("Loading error: " + errorMessage);
+    e.printStackTrace();
+
+    return false;
+  }
+}
+
+
+// ============================================
+// 4. 譜面難度
+// ============================================
+
+void buildChart() {
+
+  notes.clear();
+
+  int lastHit = -1000000;
+  int minGap = noteGapsMs[difficulty];
+
+  for (RhythmNote src : sourceNotes) {
+
+    if (src.hitTime - lastHit >= minGap) {
+
+      notes.add(
+        new RhythmNote(
+          src.lane,
+          src.hitTime,
+          src.pitch
+        )
+      );
+
+      lastHit = src.hitTime;
+    }
+  }
+
+  println(
+    "Difficulty " + difficultyNames[difficulty] +
+    ": " + notes.size() + " notes"
+  );
+}
+
+
+void cycleDifficulty() {
+
+  difficulty = (difficulty + 1) % 3;
+
+  buildChart();
+
+  if (state == 2 || state == 3) {
+    startGame();
+  } else if (state == 4) {
+    state = 1;
+  }
+}
+
+
+// ============================================
+// 5. Arduino 連線
+// ============================================
+
+void connectArduino() {
+
   String[] ports = Serial.list();
+
   printArray(ports);
 
-  String chosenPort = "";
+  String chosen = "";
 
-  // 優先尋找 COM3
   for (int i = 0; i < ports.length; i++) {
-    if (ports[i].equalsIgnoreCase("COM3")) {
-      chosenPort = ports[i];
+
+    if (ports[i].equalsIgnoreCase(preferredPort)) {
+      chosen = ports[i];
       break;
     }
   }
 
-  // 沒有 COM3 則嘗試第一個
-  if (chosenPort.equals("") &&
-      ports.length > 0) {
-    chosenPort = ports[0];
+  if (chosen.equals("") && ports.length > 0) {
+    chosen = ports[0];
   }
 
-  if (!chosenPort.equals("")) {
+  if (!chosen.equals("")) {
+
     try {
-      myPort = new Serial(
-        this, chosenPort, 9600
-      );
+
+      port = new Serial(this, chosen, 9600);
+      port.bufferUntil('\n');
 
       arduinoReady = true;
 
-      // 接收 Arduino 傳來的完整指令
-      myPort.bufferUntil('\n');
-
-      println("Arduino Port: " + chosenPort);
+      println("Arduino connected: " + chosen);
 
       sendArduino('X');
 
-    } catch (RuntimeException e) {
+    } catch (Exception e) {
+
       arduinoReady = false;
-      println("Arduino connection failed");
+
+      println(
+        "Arduino 無法連線，可以使用鍵盤：" +
+        e.getMessage()
+      );
     }
   }
-
-  loadMusic();
 }
 
-// =====================================
-// 2. 自動載入音樂
-// =====================================
 
-void loadMusic() {
-  try {
-    if (music != null) {
-      music.stop();
-    }
-
-    music = new SoundFile(
-      this, "music.mp3"
-    );
-
-    analyzer = new Amplitude(this);
-    analyzer.input(music);
-
-    music.amp(musicVolume / 100.0);
-
-    songName = "music.mp3";
-    state = 1;
-
-    println("Music loaded: " + songName);
-
-  } catch (Exception e) {
-    music = null;
-    state = 0;
-
-    println(
-      "Music load error: " +
-      e.getMessage()
-    );
-  }
-}
-
-// =====================================
-// 3. 新增鋼琴播放函式
-// =====================================
-void playPiano(int lane) {
-  if (lane >= 0 && lane < 4 &&
-      piano[lane] != null) {
-
-    piano[lane].stop();
-    piano[lane].play();
-  }
-}
-
-// =====================================
-// 4. 畫面控制
-// =====================================
+// ============================================
+// 6. 主畫面繪製
+// ============================================
 
 void draw() {
-  background(bgColor);
 
-  if (state == 0) {
-    showMenu(
-      "找不到音樂檔案",
-      "請確認 data/music.mp3"
-    );
-  }
+  drawBackground();
 
-  else if (state == 1) {
-    showMenu(
-      "音樂節奏挑戰",
-      "按 Enter 鍵開始遊戲"
-    );
+  // 自動計算視窗縮放比例
 
-    fill(subTextColor);
+  float fitScale = min(
+    width / (float)DESIGN_W,
+    height / (float)DESIGN_H
+  );
+
+  float offsetX =
+    (width - DESIGN_W * fitScale) * 0.5f;
+
+  float offsetY =
+    (height - DESIGN_H * fitScale) * 0.5f;
+
+  pushMatrix();
+
+  translate(offsetX, offsetY);
+  scale(fitScale);
+
+  try {
+
+    if (initPhase < 4) {
+
+      drawLoading();
+
+    } else if (state == 0) {
+
+      drawError();
+
+    } else if (state == 1) {
+
+      drawMenu();
+
+    } else if (state == 2 || state == 3) {
+
+      if (state == 2) {
+        updateGame();
+      }
+
+      if (state == 4) {
+
+        drawResult();
+
+      } else {
+
+        drawGame();
+
+        if (state == 3) {
+          drawPause();
+        }
+      }
+
+    } else if (state == 4) {
+
+      drawResult();
+    }
+
+  } catch (Exception e) {
+
+    state = 0;
+
+    errorMessage =
+      "畫面執行錯誤：" +
+      e.getClass().getSimpleName() +
+      " " + e.getMessage();
+
+    println(errorMessage);
+    e.printStackTrace();
+
+    // 即使介面錯誤，也嘗試顯示提示
+
+    noStroke();
+    fill(#FF7B9E);
+
+    textFont(zhFont);
     textSize(18);
 
     text(
-      "目前歌曲：" + songName,
-      width/2, 390
+      "畫面錯誤，請查看 Processing 主控台",
+      DESIGN_W/2, 350
     );
+
+  } finally {
+
+    popMatrix();
   }
 
-  else if (state == 2 || state == 3) {
+  // 先完成畫面，再執行初始化
 
-    if (state == 2) {
-      updateGame();
+  if (initPhase < 4) {
 
-      if (state == 2) {
-        updateMusicLights();
-      }
-    }
+    advanceInitialization();
 
-    if (state == 4) {
-      showResult();
-    } else {
-      drawGame();
-
-      if (state == 3) {
-        drawPause();
-      }
-    }
+    return;
   }
 
-  else if (state == 4) {
-    showResult();
+  // 音效更新放在畫面繪製之後
+
+  if (assetsLoaded) {
+
+    try {
+
+      if (voicesReady) {
+        updateHitSound();
+      }
+
+      updateVolumes();
+
+    } catch (Exception e) {
+
+      if (!audioUpdateErrorShown) {
+
+        audioUpdateErrorShown = true;
+
+        println(
+          "音效更新失敗：" + e.getMessage()
+        );
+
+        e.printStackTrace();
+      }
+    }
   }
 }
 
-// =====================================
-// 5. 開始畫面
-// =====================================
 
-void showMenu(
-  String title,
-  String subtitle
-) {
-  fill(titleColor);
-  textSize(42);
-  text(title, width/2, 190);
+// ============================================
+// 7. 遊戲載入畫面
+// ============================================
 
-  fill(mainTextColor);
-  textSize(24);
-  text(subtitle, width/2, 285);
+void drawLoading() {
 
-  fill(subTextColor);
-  textSize(19);
+  titleBar();
+
+  textFont(zhFont);
+
+  fill(#FFFFFF);
+  textSize(25);
 
   text(
-    "使用 A、S、D、F 鍵擊打音符",
-    width/2, 335
+    "正在載入遊戲...",
+    DESIGN_W/2, 300
   );
 
+  fill(#FFE16E);
   textSize(17);
 
   text(
-    "遊戲前請切換為英文輸入法",
-    width/2, 465
+    initStatus,
+    DESIGN_W/2, 350
+  );
+
+  fill(#8EB6D7);
+  textSize(14);
+
+  text(
+    "如果停留在此畫面，請查看 Processing 下方錯誤訊息",
+    DESIGN_W/2, 400
   );
 }
 
-// =====================================
-// 6. 開始遊戲
-// =====================================
+
+// ============================================
+// 8. 分階段載入
+// ============================================
+
+void advanceInitialization() {
+
+  if (initPhase == 0) {
+
+    initStatus =
+      "讀取 beatmap.json 與 6 個 WAV 音檔";
+
+    initPhase = 1;
+    return;
+  }
+
+  if (initPhase == 1) {
+
+    assetsLoaded = loadAssets();
+
+    state = assetsLoaded ? 1 : 0;
+
+    initStatus = assetsLoaded ?
+      "音樂載入成功，初始化按鍵音效" :
+      "音檔載入失敗";
+
+    initPhase = 2;
+    return;
+  }
+
+  if (initPhase == 2) {
+
+    if (assetsLoaded) {
+
+      try {
+
+        initVoices();
+        voicesReady = true;
+
+      } catch (Exception e) {
+
+        voicesReady = false;
+
+        println(
+          "電子音效初始化失敗：" +
+          e.getMessage()
+        );
+
+        e.printStackTrace();
+      }
+    }
+
+    initStatus =
+      "連接 Arduino（未連接也能用鍵盤）";
+
+    initPhase = 3;
+    return;
+  }
+
+  if (initPhase == 3) {
+
+    try {
+
+      connectArduino();
+
+    } catch (Exception e) {
+
+      arduinoReady = false;
+
+      println(
+        "Arduino 連線略過：" +
+        e.getMessage()
+      );
+    }
+
+    initPhase = 4;
+  }
+}
+
+
+// ============================================
+// 9. 背景
+// ============================================
+
+void drawBackground() {
+
+  background(#090D1C);
+
+  stroke(255, 255, 255, 11);
+
+  for (int x = 0; x < width; x += 40) {
+    line(x, 0, x, height);
+  }
+
+  for (int y = 0; y < height; y += 40) {
+    line(0, y, width, y);
+  }
+
+  noStroke();
+
+  for (int y = 0; y < height; y += 5) {
+
+    fill(0, 0, 0, 24);
+    rect(0, y, width, 2);
+  }
+}
+
+
+// ============================================
+// 10. 中文標題
+// ============================================
+
+void titleBar() {
+
+  textAlign(CENTER, CENTER);
+
+  textFont(zhFont);
+  fill(#00E9F4);
+  textSize(42);
+
+  text(
+    "音速節拍",
+    DESIGN_W/2, 48
+  );
+
+  textFont(arcadeFont);
+  fill(#FFE16E);
+  textSize(14);
+
+  text(
+    "PIXEL BEATS - 8-BIT RHYTHM GAME",
+    DESIGN_W/2, 80
+  );
+}
+
+
+// ============================================
+// 11. 開始選單
+// ============================================
+
+void drawMenu() {
+
+  titleBar();
+
+  fill(#131B35);
+  stroke(#F872FA);
+  strokeWeight(3);
+
+  rect(124, 126, 712, 472, 8);
+
+  noStroke();
+
+  textFont(arcadeFont);
+  fill(#FFFFFF);
+  textSize(29);
+
+  text(
+    songTitle,
+    DESIGN_W/2, 168
+  );
+
+  fill(#A6B8DF);
+  textSize(15);
+
+  text(
+    "MIDI: " + sourceMidi,
+    DESIGN_W/2, 203
+  );
+
+  fill(#162542);
+  stroke(#FFE16E);
+  strokeWeight(1);
+
+  rect(310, 215, 340, 32, 5);
+
+  noStroke();
+  fill(#FFE16E);
+  textSize(14);
+
+  text(
+    "LEVEL: " + difficultyNames[difficulty] +
+    "   " + notes.size() +
+    " NOTES   [Q / CLICK]",
+    DESIGN_W/2, 230
+  );
+
+  fill(#81F797);
+  textFont(zhFont);
+  textSize(22);
+
+  text(
+    "手動節奏挑戰",
+    DESIGN_W/2, 289
+  );
+
+  textFont(arcadeFont);
+
+  fill(#00E9F4);
+  rect(310, 345, 340, 64, 6);
+
+  fill(#091021);
+  textSize(26);
+
+  text(
+    "START  [ENTER]",
+    DESIGN_W/2, 377
+  );
+
+  fill(#F872FA);
+  textSize(17);
+
+  text(
+    "A / S / D / F  OR  MOUSE CLICK",
+    DESIGN_W/2, 449
+  );
+
+  fill(#BEC9E7);
+  textSize(15);
+
+  text(
+    "HIT WHEN NOTES REACH THE WHITE LINE",
+    DESIGN_W/2, 482
+  );
+
+  textFont(zhFont);
+  textSize(15);
+
+  text(
+    "空白鍵：暫停  ｜  Q：切換難度",
+    DESIGN_W/2, 515
+  );
+
+  text(
+    "1/2/3：音色  Q：難度  B：伴奏  上／下：音量",
+    DESIGN_W/2, 544
+  );
+
+  textFont(arcadeFont);
+  fill(#81F797);
+  textSize(17);
+
+  text(
+    "BEST SCORE: " + bestScores[difficulty],
+    DESIGN_W/2, 582
+  );
+
+  textFont(zhFont);
+  fill(#FFE16E);
+  textSize(16);
+
+  text(
+    "手動挑戰：跟隨節奏敲擊音符，挑戰最高分數！",
+    DESIGN_W/2, 643
+  );
+}
+
+
+// ============================================
+// 12. 錯誤畫面
+// ============================================
+
+void drawError() {
+
+  titleBar();
+
+  textFont(zhFont);
+  fill(#FF7B9E);
+  textSize(24);
+
+  text(
+    "讀取音檔或譜面失敗",
+    DESIGN_W/2, 290
+  );
+
+  textSize(16);
+
+  text(
+    errorMessage,
+    DESIGN_W/2, 341
+  );
+
+  text(
+    "請檢查 data 資料夾內的 6 個 WAV 與 beatmap.json",
+    DESIGN_W/2, 391
+  );
+}
+
+
+// ============================================
+// 13. 開始遊戲
+// ============================================
 
 void startGame() {
-  if (music == null) return;
 
-  notes.clear();
+  if (!assetsLoaded) return;
+
+  stopTracks();
 
   score = 0;
   combo = 0;
@@ -319,524 +890,999 @@ void startGame() {
   missCount = 0;
 
   judgeText = "";
-  judgeTime = -9999;
+  judgeAt = -9999;
+  judgeLane = -1;
+  lastGain = 0;
+
+  emptyTapCount = 0;
 
   for (int i = 0; i < 4; i++) {
-    keyFlashTime[i] = -9999;
+
+    hitFlash[i] = -9999;
+    hitAt[i] = -9999;
+    tapFlash[i] = -9999;
+    laneJudgeTime[i] = -9999;
+    laneJudge[i] = "";
   }
 
-  int durationMs =
-    int(music.duration() * 1000);
-
-  int endTime =
-    min(45000, durationMs - 500);
-
-  // 每隔 550ms 產生音符
-  for (int t = 2000;
-       t < endTime;
-       t += noteInterval) {
-
-    int i = notes.size();
-
-    int lane =
-      (i * 7 + i / 4) % 4;
-
-    notes.add(
-      new RhythmNote(lane, t)
-    );
-  }
-
-  if (notes.size() > 0) {
-    lastNoteTime =
-      notes.get(
-        notes.size() - 1
-      ).hitTime;
-  } else {
-    lastNoteTime = 0;
+  for (RhythmNote n : notes) {
+    n.done = false;
   }
 
   pausedTotal = 0;
+
   gameStart = millis();
-
-  smoothLevel = 0;
-  peakLevel = 0.02;
-  lastLedSend = 0;
-
-  music.stop();
-  music.cue(0);
-  music.amp(musicVolume / 100.0);
-  music.play();
+  tracksStarted = false;
 
   state = 2;
 
-  println("Game Started!");
+  println("Game start: manual");
 }
 
-// =====================================
-// 7. 遊戲時間
-// =====================================
 
-int gameTime() {
-  if (state == 3) {
-    return pauseStart -
-      gameStart - pausedTotal;
+// ============================================
+// 14. 歌曲時間
+// ============================================
+
+int songTime() {
+
+  int current =
+    state == 3 ? pauseStart : millis();
+
+  return current -
+    gameStart -
+    pausedTotal -
+    preRollMs;
+}
+
+
+// ============================================
+// 15. 播放音樂
+// ============================================
+
+void playTracks() {
+
+  for (int i = 0; i < 3; i++) {
+
+    leads[i].cue(0);
+    leads[i].amp(0);
+    leads[i].play();
+
+    leadMix[i] = 0;
   }
 
-  return millis() -
-    gameStart - pausedTotal;
+  bass.cue(0);
+  bass.amp(0);
+  bass.play();
+
+  arp.cue(0);
+  arp.amp(0);
+  arp.play();
+
+  drums.cue(0);
+  drums.amp(0);
+  drums.play();
+
+  bassMix = 0;
+  arpMix = 0;
+  drumMix = 0;
+
+  tracksStarted = true;
 }
 
-// =====================================
-// 8. 更新遊戲
-// =====================================
 
-void updateGame() {
-  int t = gameTime();
+void applyVolumes() {
 
-  for (RhythmNote n : notes) {
-    if (!n.done &&
-        t > n.hitTime + 250) {
+  // 實際音量調整由 updateVolumes() 處理
+}
 
-      n.done = true;
-      missCount++;
-      combo = 0;
 
-      setJudge("失誤");
+void updateVolumes() {
+
+  if (!assetsLoaded) return;
+
+  float volume = musicVolume / 100.0f;
+
+  for (int i = 0; i < 3; i++) {
+
+    float target =
+      (i == patchMode) ?
+      volume * 0.55f : 0;
+
+    leadMix[i] +=
+      (target - leadMix[i]) * 0.15f;
+
+    leads[i].amp(leadMix[i]);
+  }
+
+  float bassTarget =
+    accompanimentEnabled ?
+    volume * 0.82f : 0;
+
+  float arpTarget =
+    accompanimentEnabled ?
+    volume * 0.70f : 0;
+
+  bassMix +=
+    (bassTarget - bassMix) * 0.15f;
+
+  arpMix +=
+    (arpTarget - arpMix) * 0.15f;
+
+  
+  float drumTarget =
+    accompanimentEnabled ? volume * 0.85f : 0;
+  
+  drumMix +=
+    (drumTarget - drumMix) * 0.15f;
+
+
+  bass.amp(bassMix);
+  arp.amp(arpMix);
+  drums.amp(drumMix);
+}
+
+
+void pauseTracks() {
+
+  if (!tracksStarted) return;
+
+  for (SoundFile lead : leads) {
+    lead.pause();
+  }
+
+  bass.pause();
+  arp.pause();
+  drums.pause();
+}
+
+
+void resumeTracks() {
+
+  if (!tracksStarted) return;
+
+  for (SoundFile lead : leads) {
+    lead.play();
+  }
+
+  bass.play();
+  arp.play();
+  drums.play();
+
+  applyVolumes();
+}
+
+
+void stopTracks() {
+
+  if (!assetsLoaded) return;
+
+  for (SoundFile lead : leads) {
+
+    if (lead != null) {
+      lead.stop();
     }
   }
 
-  if (t > lastNoteTime + 650) {
+  if (bass != null) bass.stop();
+  if (arp != null) arp.stop();
+  if (drums != null) drums.stop();
+
+  tracksStarted = false;
+}
+
+
+// ============================================
+// 16. 遊戲判定更新
+// ============================================
+
+void updateGame() {
+
+  int t = songTime();
+
+  if (!tracksStarted && t >= 0) {
+    playTracks();
+  }
+
+  // 只保留手動演奏
+
+  for (RhythmNote n : notes) {
+
+    if (!n.done &&
+        t > n.hitTime + HIT_WINDOW_MS) {
+
+      n.done = true;
+
+      missCount++;
+      combo = 0;
+
+      laneJudge[n.lane] = "MISS";
+      laneJudgeTime[n.lane] = millis();
+
+      judgeLane = n.lane;
+      lastGain = 0;
+
+      showJudge("MISS");
+    }
+  }
+
+  sendBeatLed(t);
+
+  if (t > durationMs) {
     finishGame();
   }
 }
 
-// =====================================
-// 9. 繪製遊戲畫面
-// =====================================
 
-void drawGame() {
-  int t = gameTime();
+// ============================================
+// 17. Arduino 節奏燈
+// ============================================
 
-  background(bgColor);
+void sendBeatLed(int t) {
 
-  // 顯示搖桿控制狀態
-  fill(subTextColor);
-  textSize(14);
-
-  text(
-    "模式 M" + musicMode +
-    "  |  音量 " + musicVolume +
-    "  |  智慧伴奏 " +
-    (accompanimentEnabled ? "開啟" : "關閉"),
-    width/2, 65
-  );
-
-  // 分數
-  fill(mainTextColor);
-  textSize(26);
-
-  text(
-    "分數：" + score,
-    170, 38
-  );
-
-  text(
-    "連擊：" + combo,
-    610, 38
-  );
-
-  // 四條跑道
-  for (int i = 0; i < 4; i++) {
-    float x = 160 + i * 120;
-
-    stroke(panelBorderColor);
-    strokeWeight(2);
-    fill(panelColor);
-
-    rect(x, 75, 116, 440, 12);
-    noStroke();
-
-    // 按鍵時短暫發亮
-    if (state == 2 &&
-        millis() - keyFlashTime[i] < 110) {
-
-      fill(laneColors[i], 105);
-      rect(x, 75, 116, 440, 12);
-    }
-
-    fill(mainTextColor);
-    textSize(32);
-
-    text(
-      str(keys[i]).toUpperCase(),
-      x + 58, 550
-    );
-  }
-
-  // 判定線
-  stroke(hitLineColor);
-  strokeWeight(5);
-
-  line(
-    160, hitY,
-    636, hitY
-  );
-
-  noStroke();
-
-  // 繪製下落音符
-  for (RhythmNote n : notes) {
-    if (n.done) continue;
-
-    float remain =
-      n.hitTime - t;
-
-    float y = hitY -
-      remain *
-      (hitY - 85) / travelTime;
-
-    if (y >= 75 && y <= 510) {
-      float x =
-        160 + n.lane * 120;
-
-      // 音符陰影
-      fill(130, 170, 195, 55);
-
-      rect(
-        x + 12,
-        y - 9,
-        98, 26, 10
-      );
-
-      // 音符本體
-      fill(laneColors[n.lane]);
-
-      rect(
-        x + 9,
-        y - 13,
-        98, 26, 10
-      );
-    }
-  }
-
-  // 顯示命中判定
-  if (millis() - judgeTime < 450) {
-    if (judgeText.equals("完美")) {
-      fill(perfectColor);
-    }
-    else if (judgeText.equals("良好")) {
-      fill(goodColor);
-    }
-    else {
-      fill(missColor);
-    }
-
-    textSize(35);
-
-    text(
-      judgeText,
-      width/2, 590
-    );
-  }
-}
-
-// =====================================
-// 9. 擊打音符判定
-// =====================================
-
-void hitNote(int lane) {
-  int t = gameTime();
-
-  RhythmNote nearest = null;
-  int bestDiff = 99999;
-
-  for (RhythmNote n : notes) {
-    if (n.done ||
-        n.lane != lane) {
-      continue;
-    }
-
-    int diff =
-      abs(t - n.hitTime);
-
-    if (diff < bestDiff) {
-      bestDiff = diff;
-      nearest = n;
-    }
-  }
-
-  // 沒擊中
-  if (nearest == null ||
-      bestDiff > 250) {
-
-    combo = 0;
-    setJudge("失誤");
-
-    println("MISS");
-
-    return;
-  }
-
-  // 完美
-  if (bestDiff <= 100) {
-    score += 100;
-    perfectCount++;
-    combo++;
-
-    nearest.done = true;
-    setJudge("完美");
-
-    println("PERFECT +100");
-  }
-
-  // 良好
-  else {
-    score += 50;
-    goodCount++;
-    combo++;
-
-    nearest.done = true;
-    setJudge("良好");
-
-    println("GOOD +50");
-  }
-
-  maxCombo = max(maxCombo, combo);
-  playPiano(lane);
-}
-
-// =====================================
-// 10. 判定文字
-// =====================================
-
-void setJudge(String s) {
-  judgeText = s;
-  judgeTime = millis();
-}
-
-// =====================================
-// 11. Maker UNO 流水燈
-// =====================================
-
-void updateMusicLights() {
-  if (analyzer == null) return;
-
-  if (millis() - lastLedSend < 70) {
+  if (!arduinoReady ||
+      port == null ||
+      t < 0 ||
+      bpm <= 0 ||
+      millis() - lastLedSend < 70) {
     return;
   }
 
   lastLedSend = millis();
 
-  float level =
-    analyzer.analyze();
+  float beatLength = 60000.0f / bpm;
 
-  smoothLevel =
-    smoothLevel * 0.65 +
-    level * 0.35;
+  float phase =
+    (t % ((int)beatLength)) / beatLength;
 
-  peakLevel = max(
-    0.015,
-    max(
-      smoothLevel,
-      peakLevel * 0.997
-    )
+  int light = constrain(
+    (int)(9 * exp(-phase * 6)),
+    0, 9
   );
 
-  float normalized =
-    constrain(
-      smoothLevel / peakLevel,
-      0, 1
-    );
-
-  int ledLevel =
-    int(normalized * 9);
-
-  if (arduinoReady) {
-    myPort.write(
-      "L" + ledLevel + "\n"
-    );
-  }
+  port.write("L" + light + "\n");
 }
 
-// =====================================
-// 12. Arduino 通訊
-// =====================================
 
-// 接收 Arduino 搖桿傳來的完整指令
-// 例如 M1、V80、B1
+// ============================================
+// 18. 遊戲畫面
+// ============================================
 
-void serialEvent(Serial port) {
-  String message = port.readStringUntil('\n');
+void drawGame() {
 
-  if (message == null) return;
+  titleBar();
 
-  message = trim(message);
+  textFont(arcadeFont);
 
-  if (message.length() == 0) return;
+  fill(#FFFFFF);
+  textSize(20);
 
-  println("Arduino -> Processing: " + message);
+  text("SCORE " + score, 215, 112);
+  text("COMBO " + combo, 739, 112);
 
-  // 音樂模式
-  if (message.equals("M0")) {
-    musicMode = 0;
-  }
-  else if (message.equals("M1")) {
-    musicMode = 1;
-  }
-  else if (message.equals("M2")) {
-    musicMode = 2;
-  }
+  fill(#8EB6D7);
+  textFont(zhFont);
+  textSize(15);
 
-  // 音量 V0～V100
-  else if (message.startsWith("V")) {
-    String valueText = message.substring(1);
+  text(
+    "音色：" + patchNames[patchMode] +
+    "  ｜  音量：" + musicVolume + "%" +
+    "  ｜  電子伴奏：" +
+    (accompanimentEnabled ? "開啟" : "關閉"),
+    DESIGN_W/2, 145
+  );
 
-    try {
-      int newVolume = int(valueText);
+  textFont(arcadeFont);
 
-      musicVolume = constrain(
-        newVolume, 0, 100
+  int t = songTime();
+
+  float p = constrain(
+    t / (float)durationMs,
+    0, 1
+  );
+
+  fill(#1A2848);
+  rect(TRACK_X, 164, 628, 10);
+
+  fill(#00E9F4);
+  rect(TRACK_X, 164, 628 * p, 10);
+
+  noStroke();
+
+  // 四條軌道
+  for (int i = 0; i < 4; i++) {
+
+    int x = TRACK_X + i * TRACK_W;
+
+    fill(#121A30);
+    stroke(neon[i], 105);
+    strokeWeight(2);
+
+    rect(
+      x + 3,
+      TRACK_TOP,
+      TRACK_W - 6,
+      365
+    );
+
+    noStroke();
+
+    if (millis() - hitFlash[i] < 160) {
+
+      fill(neon[i], 85);
+
+      rect(
+        x + 7,
+        TRACK_TOP + 4,
+        TRACK_W - 14,
+        354
+      );
+    }
+
+    if (millis() - tapFlash[i] < 300) {
+
+      fill(#FFFFFF, 40);
+
+      rect(
+        x + 3,
+        485,
+        TRACK_W - 6,
+        75
+      );
+    }
+
+    fill(
+      millis() - tapFlash[i] < 300 ?
+      neon[i] : #253450
+    );
+
+    stroke(neon[i]);
+    strokeWeight(2);
+
+    rect(
+      x + 20,
+      572,
+      TRACK_W - 40,
+      40, 4
+    );
+
+    noStroke();
+
+    fill(
+      millis() - tapFlash[i] < 300 ?
+      #091021 : neon[i]
+    );
+
+    textFont(arcadeFont);
+    textSize(24);
+
+    text(
+      Character.toString(
+        laneKeys[i]
+      ).toUpperCase(),
+      x + TRACK_W/2,
+      592
+    );
+
+    if (millis() - laneJudgeTime[i] < 420) {
+
+      float age =
+        (millis() - laneJudgeTime[i]) / 420.0f;
+
+      fill(
+        laneJudge[i].equals("PERFECT") ?
+        #81F797 :
+        laneJudge[i].equals("GOOD") ?
+        #FFE16E : #FF7B9E
       );
 
-      if (music != null) {
-        music.amp(musicVolume / 100.0);
-      }
-    }
-    catch (Exception e) {
-      println("音量指令格式錯誤：" + message);
+      textSize(13);
+
+      text(
+        laneJudge[i],
+        x + TRACK_W/2,
+        462 - 18 * age
+      );
     }
   }
 
-  // 智慧伴奏開關
-  else if (message.equals("B1")) {
-    accompanimentEnabled = true;
+  // 白色判定線
+  stroke(#FFFFFF);
+  strokeWeight(3);
+
+  line(TRACK_X, 522, 778, 522);
+
+  noStroke();
+
+  // 畫出音符
+  for (RhythmNote n : notes) {
+
+    if (n.done) continue;
+
+    float remain = n.hitTime - t;
+
+    float y =
+      522 - remain * (522 - 205) / travelTimeMs;
+
+    if (y >= TRACK_TOP && y <= 552) {
+
+      int x =
+        TRACK_X + n.lane * TRACK_W;
+
+      fill(neon[n.lane], 45);
+
+      rect(
+        x + 15,
+        y - 16,
+        TRACK_W - 30,
+        34, 3
+      );
+
+      fill(neon[n.lane]);
+
+      rect(
+        x + 23,
+        y - 10,
+        TRACK_W - 46,
+        22, 2
+      );
+
+      fill(#0C1223);
+      textSize(11);
+
+      text(
+        midiName(n.pitch),
+        x + TRACK_W/2,
+        y + 1
+      );
+    }
   }
-  else if (message.equals("B0")) {
-    accompanimentEnabled = false;
+
+  // 暫停按鈕
+  fill(#1B2741);
+  stroke(#8AA1C8);
+  strokeWeight(2);
+
+  rect(797, 204, 130, 49, 5);
+
+  noStroke();
+  fill(#FFFFFF);
+
+  textSize(16);
+  text("II PAUSE", 862, 228);
+
+  // 手動模式資訊
+  fill(#1B2741);
+  stroke(#81F797);
+  strokeWeight(2);
+
+  rect(797, 273, 130, 90, 5);
+
+  noStroke();
+  fill(#81F797);
+
+  textFont(zhFont);
+  textSize(18);
+
+  text("手動挑戰", 862, 295);
+
+  fill(#9CACC9);
+  textSize(14);
+
+  text("節奏計分模式", 862, 330);
+
+  // 統計資料
+  textFont(arcadeFont);
+
+  fill(#FFFFFF);
+  textSize(13);
+
+  text("PERFECT " + perfectCount, 862, 405);
+  text("GOOD " + goodCount, 862, 429);
+  text("MISS " + missCount, 862, 453);
+
+  fill(#81F797);
+  text(
+    "BEST " + bestScores[difficulty],
+    862, 488
+  );
+
+  // 難度按鈕
+  fill(#1B2741);
+  stroke(#FFE16E);
+  strokeWeight(1.5f);
+
+  rect(797, 510, 130, 69, 5);
+
+  noStroke();
+  fill(#FFE16E);
+  textSize(15);
+
+  text(
+    "LEVEL " + difficultyNames[difficulty],
+    862, 532
+  );
+
+  fill(#A6B8DF);
+  textSize(12);
+
+  text(notes.size() + " NOTES", 862, 554);
+  text("Q / CLICK", 862, 572);
+
+  // 預備倒數
+  if (t < 0) {
+
+    fill(#FFFFFF);
+    textSize(35);
+
+    text(
+      "READY " +
+      max(1, (int)ceil(-t / 1000.0f)),
+      DESIGN_W/2, 388
+    );
+  }
+
+  // 判定顯示
+  if (millis() - judgeAt < 475) {
+
+    fill(
+      judgeText.equals("PERFECT") ? #81F797 :
+      judgeText.equals("GOOD") ? #FFE16E :
+      (judgeText.equals("EMPTY") ||
+       judgeText.equals("READY")) ?
+      #9AAEDF : #FF7B9E
+    );
+
+    textSize(30);
+
+    text(
+      judgeText +
+      (lastGain > 0 ? "  +" + lastGain : ""),
+      DESIGN_W/2, 650
+    );
+
+  } else {
+
+    fill(#8797BE);
+    textSize(15);
+
+    text(
+      "HIT A / S / D / F OR CLICK EACH LANE",
+      DESIGN_W/2, 650
+    );
   }
 }
 
-// 傳送指令給 Arduino
-void sendArduino(char command) {
-  if (arduinoReady &&
-      myPort != null) {
-    myPort.write(command);
+
+// ============================================
+// 19. MIDI 音名
+// ============================================
+
+String midiName(int pitch) {
+
+  String[] names = {
+    "C", "C#", "D", "D#",
+    "E", "F", "F#", "G",
+    "G#", "A", "A#", "B"
+  };
+
+  return names[pitch % 12] +
+    Integer.toString(pitch / 12 - 1);
+}
+
+
+// ============================================
+// 20. 按鍵電子音效
+// ============================================
+
+void playHit(int lane, int pitch) {
+
+  if (!voicesReady) return;
+
+  float frequency =
+    440.0f * pow(2, (pitch - 69) / 12.0f);
+
+  pulseVoices[lane].freq(frequency);
+  triangleVoices[lane].freq(frequency);
+  sawVoices[lane].freq(frequency);
+
+  hitAt[lane] = millis();
+}
+
+
+void updateHitSound() {
+
+  if (!voicesReady) return;
+
+  for (int i = 0; i < 4; i++) {
+
+    int age = millis() - hitAt[i];
+
+    float env = 0;
+
+    if (state == 2 &&
+        age >= 0 &&
+        age < 300) {
+
+      env =
+        min(1, age / 8.0f) *
+        exp(-age / 125.0f) *
+        0.28f *
+        (musicVolume / 100.0f);
+    }
+
+    pulseVoices[i].amp(
+      patchMode == 0 ? env : 0
+    );
+
+    triangleVoices[i].amp(
+      patchMode == 1 ? env : 0
+    );
+
+    sawVoices[i].amp(
+      patchMode == 2 ? env * 0.7f : 0
+    );
   }
 }
 
-// =====================================
-// 13. 暫停畫面
-// =====================================
+
+// ============================================
+// 21. 敲擊判定與計分
+// ============================================
+
+void hitNote(int lane) {
+
+  if (state != 2 ||
+      lane < 0 ||
+      lane >= 4) {
+    return;
+  }
+
+  tapFlash[lane] = millis();
+
+  int t = songTime();
+
+  if (t < -HIT_WINDOW_MS) {
+
+    lastGain = 0;
+    showJudge("READY");
+
+    return;
+  }
+
+  RhythmNote best = null;
+  int bestDelta = 100000;
+
+  for (RhythmNote n : notes) {
+
+    if (n.done || n.lane != lane) {
+      continue;
+    }
+
+    int diff = abs(n.hitTime - t);
+
+    if (diff < bestDelta) {
+
+      bestDelta = diff;
+      best = n;
+    }
+  }
+
+  if (best == null ||
+      bestDelta > HIT_WINDOW_MS) {
+
+    emptyTapCount++;
+
+    judgeLane = lane;
+    lastGain = 0;
+
+    laneJudge[lane] = "EMPTY";
+    laneJudgeTime[lane] = millis();
+
+    showJudge("EMPTY");
+
+    return;
+  }
+
+  best.done = true;
+
+  if (bestDelta <= PERFECT_WINDOW_MS) {
+
+    perfectCount++;
+    score += 100;
+    combo++;
+
+    lastGain = 100;
+
+    showJudge("PERFECT");
+
+    laneJudge[lane] = "PERFECT";
+
+  } else {
+
+    goodCount++;
+    score += 50;
+    combo++;
+
+    lastGain = 50;
+
+    showJudge("GOOD");
+
+    laneJudge[lane] = "GOOD";
+  }
+
+  judgeLane = lane;
+
+  maxCombo = max(maxCombo, combo);
+
+  laneJudgeTime[lane] = millis();
+  hitFlash[lane] = millis();
+
+  playHit(lane, best.pitch);
+}
+
+
+void showJudge(String s) {
+
+  judgeText = s;
+  judgeAt = millis();
+}
+
+
+// ============================================
+// 22. 暫停功能
+// ============================================
+
+void togglePause() {
+
+  if (state == 2) {
+
+    pauseStart = millis();
+
+    pauseTracks();
+
+    state = 3;
+
+    sendArduino('X');
+
+  } else if (state == 3) {
+
+    pausedTotal += millis() - pauseStart;
+
+    resumeTracks();
+
+    state = 2;
+  }
+}
+
 
 void drawPause() {
+
+  fill(5, 8, 20, 235);
+
+  rect(110, 215, 740, 255, 8);
+
+  stroke(#F872FA);
+  noFill();
+
+  rect(110, 215, 740, 255, 8);
+
   noStroke();
-  fill(255, 255, 255, 190);
 
-  rect(
-    0, 0,
-    width, height
-  );
+  textFont(arcadeFont);
+  textSize(44);
+  fill(#FFE16E);
 
-  fill(titleColor);
-  textSize(48);
+  text("PAUSED", DESIGN_W/2, 293);
 
-  text(
-    "遊戲暫停",
-    width/2,
-    height/2
-  );
+  fill(#00E9F4);
 
-  fill(mainTextColor);
+  rect(327, 340, 306, 57, 5);
+
+  fill(#091021);
   textSize(21);
 
+  text("RESUME  [SPACE]", DESIGN_W/2, 369);
+
+  textSize(15);
+  fill(#A6B8DF);
+
   text(
-    "按空白鍵繼續",
-    width/2,
-    height/2 + 65
+    "CLICK RESUME TO CONTINUE",
+    DESIGN_W/2, 431
   );
 }
 
-// =====================================
-// 14. 結束遊戲
-// =====================================
+
+// ============================================
+// 23. 結算畫面
+// ============================================
 
 void finishGame() {
-  state = 4;
 
-  if (music != null) {
-    music.stop();
-  }
+  bestScores[difficulty] =
+    max(bestScores[difficulty], score);
+
+  stopTracks();
 
   sendArduino('X');
+
+  state = 4;
 }
 
-// =====================================
-// 15. 結算畫面
-// =====================================
 
-void showResult() {
-  background(bgColor);
+void drawResult() {
 
-  fill(titleColor);
+  titleBar();
+
+  textFont(arcadeFont);
   textSize(42);
+  fill(#81F797);
 
   text(
-    "遊戲結束",
-    400, 105
+    "GAME OVER",
+    DESIGN_W/2, 181
   );
 
-  fill(mainTextColor);
-  textSize(38);
+  fill(#FFFFFF);
+  textSize(27);
 
   text(
-    "總分：" + score,
-    400, 190
+    "SCORE: " + score,
+    DESIGN_W/2, 256
   );
 
+  textSize(19);
+
+  text(
+    "PERFECT: " + perfectCount +
+    "     GOOD: " + goodCount +
+    "     MISS: " + missCount,
+    DESIGN_W/2, 334
+  );
+
+  text(
+    "MAX COMBO: " + maxCombo,
+    DESIGN_W/2, 372
+  );
+
+  textSize(15);
+  fill(#A6B8DF);
+
+  text(
+    "LEVEL " + difficultyNames[difficulty] +
+    " / " + notes.size() + " NOTES",
+    DESIGN_W/2, 304
+  );
+
+  
+  // 顯示最高分數
+  fill(#FFE16E);
+  textSize(16);
+
+  text(
+    "BEST SCORE: " + bestScores[difficulty],
+    DESIGN_W/2, 415
+  );
+
+
+  fill(#00E9F4);
+
+  rect(309, 470, 342, 66, 7);
+
+  fill(#091021);
   textSize(25);
 
   text(
-    "完美命中：" + perfectCount,
-    400, 260
+    "RETRY  [ENTER]",
+    DESIGN_W/2, 504
+  );
+
+  fill(#AAB9D9);
+  textSize(15);
+
+  text(
+    "ENTER: RETRY  |  Q: CHANGE LEVEL",
+    DESIGN_W/2, 577
   );
 
   text(
-    "良好命中：" + goodCount,
-    400, 305
-  );
-
-  text(
-    "失誤次數：" + missCount,
-    400, 350
-  );
-
-  text(
-    "最高連擊：" + maxCombo,
-    400, 395
-  );
-
-  fill(subTextColor);
-  textSize(20);
-
-  text(
-    "按 Enter 鍵重新挑戰",
-    400, 490
+    "OR CLICK RETRY TO PLAY AGAIN",
+    DESIGN_W/2, 607
   );
 }
 
-// =====================================
-// 16. 鍵盤操作
-// =====================================
+
+// ============================================
+// 24. Arduino 接收
+// ============================================
+
+void serialEvent(Serial src) {
+
+  String incoming =
+    src.readStringUntil('\n');
+
+  if (incoming == null) return;
+
+  String msg = incoming.trim();
+  println("Arduino 指令：" + msg);
+
+  if (msg.equals("M0")) {
+
+    patchMode = 0;
+
+  } else if (msg.equals("M1")) {
+
+    patchMode = 1;
+
+  } else if (msg.equals("M2")) {
+
+    patchMode = 2;
+
+  } else if (msg.equals("B1")) {
+
+    accompanimentEnabled = true;
+
+  } else if (msg.equals("B0")) {
+
+    accompanimentEnabled = false;
+
+  } else if (msg.equals("K")) {
+
+    if (state == 1 || state == 4) {
+      startGame();
+    } else {
+      togglePause();
+    }
+
+  } else if (msg.startsWith("V")) {
+
+    try {
+
+      musicVolume = constrain(
+        Integer.parseInt(msg.substring(1)),
+        0, 100
+      );
+
+    } catch (Exception e) {
+
+      println("Bad volume command: " + msg);
+    }
+  }
+
+  if (assetsLoaded) {
+    applyVolumes();
+  }
+}
+
+
+void sendArduino(char cmd) {
+
+  if (arduinoReady && port != null) {
+    port.write(cmd);
+  }
+}
+
+
+// ============================================
+// 25. 鍵盤操作
+// ============================================
 
 void keyPressed() {
 
-  // Enter 開始 / 重新挑戰
-  if (keyCode == 10 ||
-      keyCode == 13 ||
-      key == ENTER ||
+  if (initPhase < 4) return;
+
+  println(
+    "KEY=" + key +
+    "  CODE=" + keyCode +
+    "  STATE=" + state
+  );
+
+  // Enter：開始或重玩
+  if (key == ENTER ||
       key == RETURN ||
-      key == 'p' ||
-      key == 'P') {
+      keyCode == 10 ||
+      keyCode == 13) {
 
     if (state == 1 || state == 4) {
       startGame();
@@ -845,80 +1891,261 @@ void keyPressed() {
     return;
   }
 
-  // Space 暫停 / 繼續
+  // 空白鍵：暫停
   if (key == ' ') {
 
-    if (state == 2) {
-      pauseStart = millis();
+    togglePause();
+    return;
+  }
 
-      music.pause();
-      state = 3;
+  // Q：難度
+  if (key == 'q' || key == 'Q') {
 
-      sendArduino('X');
-    }
+    cycleDifficulty();
+    return;
+  }
 
-    else if (state == 3) {
-      pausedTotal += millis() - pauseStart;
+  // 1、2、3：電子音色
+  if (key >= '1' && key <= '3') {
 
-      music.play();
-      state = 2;
+    patchMode = key - '1';
+
+    if (assetsLoaded) {
+      applyVolumes();
     }
 
     return;
   }
 
-  // 只有遊戲進行中才接受 A、S、D、F
+  // B：伴奏
+  if (key == 'b' || key == 'B') {
+
+    accompanimentEnabled =
+      !accompanimentEnabled;
+
+    if (assetsLoaded) {
+      applyVolumes();
+    }
+
+    return;
+  }
+
+  // 上下鍵：音量
+  if (keyCode == UP || keyCode == DOWN) {
+
+    musicVolume = constrain(
+      musicVolume +
+      (keyCode == UP ? 5 : -5),
+      0, 100
+    );
+
+    if (assetsLoaded) {
+      applyVolumes();
+    }
+
+    return;
+  }
+
   if (state != 2) return;
 
-  char k = Character.toLowerCase(key);
+  char pressed =
+    Character.toLowerCase(key);
 
-  // A、S、D、F 按鍵
-  for (int i = 0; i < 4; i++) {
+  int lane = -1;
 
-    if (k == keys[i]) {
+  if (pressed == 'a' || keyCode == 65) {
 
-      // 跑道閃爍
-      keyFlashTime[i] = millis();
+    lane = 0;
 
-      // 顯示按鍵偵測結果，方便除錯
-      println("偵測到按鍵：" + k);
+  } else if (pressed == 's' || keyCode == 83) {
 
-      // 執行音符判定及鋼琴音效
-      hitNote(i);
+    lane = 1;
 
-      break;
-    }
+  } else if (pressed == 'd' || keyCode == 68) {
+
+    lane = 2;
+
+  } else if (pressed == 'f' || keyCode == 70) {
+
+    lane = 3;
+  }
+
+  if (lane != -1) {
+
+    println("按下軌道：" + lane);
+
+    hitNote(lane);
   }
 }
 
-// =====================================
-// 17. 音符類別
-// =====================================
+
+// ============================================
+// 26. 滑鼠操作
+// ============================================
+
+void mousePressed() {
+
+  if (initPhase < 4) return;
+
+  float fitScale = min(
+    width / (float)DESIGN_W,
+    height / (float)DESIGN_H
+  );
+
+  if (fitScale <= 0) return;
+
+  float offsetX =
+    (width - DESIGN_W * fitScale) * 0.5f;
+
+  float offsetY =
+    (height - DESIGN_H * fitScale) * 0.5f;
+
+  float x =
+    (mouseX - offsetX) / fitScale;
+
+  float y =
+    (mouseY - offsetY) / fitScale;
+
+  // 開始畫面
+  if (state == 1) {
+
+    if (inside(x, y, 310, 215, 340, 32)) {
+
+      cycleDifficulty();
+      return;
+    }
+
+    if (inside(x, y, 310, 345, 340, 64)) {
+
+      startGame();
+      return;
+    }
+
+    return;
+  }
+
+  // 結算畫面
+  if (state == 4) {
+
+    if (inside(x, y, 309, 470, 342, 66)) {
+      startGame();
+    }
+
+    return;
+  }
+
+  // 暫停畫面
+  if (state == 3) {
+
+    if (inside(x, y, 327, 340, 306, 57)) {
+      togglePause();
+    }
+
+    return;
+  }
+
+  if (state != 2) return;
+
+  // 切換難度
+  if (inside(x, y, 797, 510, 130, 69)) {
+
+    cycleDifficulty();
+    return;
+  }
+
+  // 暫停
+  if (inside(x, y, 797, 204, 130, 49)) {
+
+    togglePause();
+    return;
+  }
+
+  // 點擊音符軌道
+  if (x >= TRACK_X &&
+      x < TRACK_X + TRACK_W * 4 &&
+      y >= TRACK_TOP &&
+      y <= TRACK_BOTTOM) {
+
+    int lane = constrain(
+      (int)((x - TRACK_X) / TRACK_W),
+      0, 3
+    );
+
+    hitNote(lane);
+  }
+}
+
+
+boolean inside(
+  float x,
+  float y,
+  float bx,
+  float by,
+  float bw,
+  float bh
+) {
+
+  return x >= bx &&
+         x <= bx + bw &&
+         y >= by &&
+         y <= by + bh;
+}
+
+
+// ============================================
+// 27. 音符類別
+// ============================================
 
 class RhythmNote {
+
   int lane;
   int hitTime;
+  int pitch;
 
   boolean done = false;
 
-  RhythmNote(int l, int t) {
-    lane = l;
-    hitTime = t;
+  RhythmNote(
+    int lane,
+    int hitTime,
+    int pitch
+  ) {
+
+    this.lane = lane;
+    this.hitTime = hitTime;
+    this.pitch = pitch;
   }
 }
 
-// =====================================
-// 18. 關閉程式
-// =====================================
+
+// ============================================
+// 28. 關閉程式時清理資源
+// ============================================
 
 void dispose() {
+
   sendArduino('X');
 
-  if (myPort != null) {
-    myPort.stop();
+  stopTracks();
+
+  if (port != null) {
+    port.stop();
   }
 
-  if (music != null) {
-    music.stop();
+  if (voicesReady) {
+
+    for (int i = 0; i < 4; i++) {
+
+      if (pulseVoices[i] != null) {
+        pulseVoices[i].stop();
+      }
+
+      if (triangleVoices[i] != null) {
+        triangleVoices[i].stop();
+      }
+
+      if (sawVoices[i] != null) {
+        sawVoices[i].stop();
+      }
+    }
   }
 }
