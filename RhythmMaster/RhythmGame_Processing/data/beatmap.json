@@ -1,0 +1,915 @@
+{
+  "title": "PIXEL POP DEMO",
+  "source": "demo_original.mid",
+  "method": "External MIDI -> note selection heuristic -> original 8-bit waveform synthesis",
+  "isAIPrediction": false,
+  "durationMs": 32657,
+  "bpm": 125.0,
+  "chords": [
+    "C",
+    "G",
+    "Am",
+    "F"
+  ],
+  "midiTracks": 1,
+  "rawNotes": 128,
+  "selectedNotes": 128,
+  "notes": [
+    {
+      "lane": 1,
+      "startMs": 0,
+      "durationMs": 212,
+      "pitch": 76,
+      "velocity": 108
+    },
+    {
+      "lane": 2,
+      "startMs": 240,
+      "durationMs": 177,
+      "pitch": 79,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 480,
+      "durationMs": 177,
+      "pitch": 81,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 720,
+      "durationMs": 177,
+      "pitch": 79,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 960,
+      "durationMs": 212,
+      "pitch": 76,
+      "velocity": 108
+    },
+    {
+      "lane": 1,
+      "startMs": 1200,
+      "durationMs": 177,
+      "pitch": 74,
+      "velocity": 84
+    },
+    {
+      "lane": 0,
+      "startMs": 1440,
+      "durationMs": 177,
+      "pitch": 72,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 1680,
+      "durationMs": 177,
+      "pitch": 76,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 1920,
+      "durationMs": 212,
+      "pitch": 74,
+      "velocity": 108
+    },
+    {
+      "lane": 2,
+      "startMs": 2160,
+      "durationMs": 177,
+      "pitch": 79,
+      "velocity": 84
+    },
+    {
+      "lane": 3,
+      "startMs": 2400,
+      "durationMs": 177,
+      "pitch": 83,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 2640,
+      "durationMs": 177,
+      "pitch": 81,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 2880,
+      "durationMs": 212,
+      "pitch": 79,
+      "velocity": 108
+    },
+    {
+      "lane": 1,
+      "startMs": 3120,
+      "durationMs": 177,
+      "pitch": 74,
+      "velocity": 84
+    },
+    {
+      "lane": 0,
+      "startMs": 3360,
+      "durationMs": 177,
+      "pitch": 71,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 3600,
+      "durationMs": 177,
+      "pitch": 74,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 3840,
+      "durationMs": 212,
+      "pitch": 76,
+      "velocity": 108
+    },
+    {
+      "lane": 2,
+      "startMs": 4080,
+      "durationMs": 177,
+      "pitch": 81,
+      "velocity": 84
+    },
+    {
+      "lane": 3,
+      "startMs": 4320,
+      "durationMs": 177,
+      "pitch": 84,
+      "velocity": 84
+    },
+    {
+      "lane": 3,
+      "startMs": 4560,
+      "durationMs": 177,
+      "pitch": 83,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 4800,
+      "durationMs": 212,
+      "pitch": 81,
+      "velocity": 108
+    },
+    {
+      "lane": 2,
+      "startMs": 5040,
+      "durationMs": 177,
+      "pitch": 79,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 5280,
+      "durationMs": 177,
+      "pitch": 76,
+      "velocity": 84
+    },
+    {
+      "lane": 0,
+      "startMs": 5520,
+      "durationMs": 177,
+      "pitch": 72,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 5760,
+      "durationMs": 212,
+      "pitch": 77,
+      "velocity": 108
+    },
+    {
+      "lane": 2,
+      "startMs": 6000,
+      "durationMs": 177,
+      "pitch": 81,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 6240,
+      "durationMs": 177,
+      "pitch": 79,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 6480,
+      "durationMs": 177,
+      "pitch": 77,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 6720,
+      "durationMs": 212,
+      "pitch": 76,
+      "velocity": 108
+    },
+    {
+      "lane": 0,
+      "startMs": 6960,
+      "durationMs": 177,
+      "pitch": 72,
+      "velocity": 84
+    },
+    {
+      "lane": 0,
+      "startMs": 7200,
+      "durationMs": 177,
+      "pitch": 69,
+      "velocity": 84
+    },
+    {
+      "lane": 0,
+      "startMs": 7440,
+      "durationMs": 177,
+      "pitch": 72,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 7680,
+      "durationMs": 212,
+      "pitch": 76,
+      "velocity": 108
+    },
+    {
+      "lane": 1,
+      "startMs": 7920,
+      "durationMs": 177,
+      "pitch": 76,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 8160,
+      "durationMs": 177,
+      "pitch": 79,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 8400,
+      "durationMs": 177,
+      "pitch": 81,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 8640,
+      "durationMs": 212,
+      "pitch": 79,
+      "velocity": 108
+    },
+    {
+      "lane": 1,
+      "startMs": 8880,
+      "durationMs": 177,
+      "pitch": 76,
+      "velocity": 84
+    },
+    {
+      "lane": 0,
+      "startMs": 9120,
+      "durationMs": 177,
+      "pitch": 72,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 9360,
+      "durationMs": 177,
+      "pitch": 74,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 9600,
+      "durationMs": 212,
+      "pitch": 79,
+      "velocity": 108
+    },
+    {
+      "lane": 2,
+      "startMs": 9840,
+      "durationMs": 177,
+      "pitch": 79,
+      "velocity": 84
+    },
+    {
+      "lane": 3,
+      "startMs": 10080,
+      "durationMs": 177,
+      "pitch": 83,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 10320,
+      "durationMs": 177,
+      "pitch": 81,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 10560,
+      "durationMs": 212,
+      "pitch": 79,
+      "velocity": 108
+    },
+    {
+      "lane": 1,
+      "startMs": 10800,
+      "durationMs": 177,
+      "pitch": 74,
+      "velocity": 84
+    },
+    {
+      "lane": 0,
+      "startMs": 11040,
+      "durationMs": 177,
+      "pitch": 71,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 11280,
+      "durationMs": 177,
+      "pitch": 74,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 11520,
+      "durationMs": 212,
+      "pitch": 81,
+      "velocity": 108
+    },
+    {
+      "lane": 2,
+      "startMs": 11760,
+      "durationMs": 177,
+      "pitch": 81,
+      "velocity": 84
+    },
+    {
+      "lane": 3,
+      "startMs": 12000,
+      "durationMs": 177,
+      "pitch": 84,
+      "velocity": 84
+    },
+    {
+      "lane": 3,
+      "startMs": 12240,
+      "durationMs": 177,
+      "pitch": 83,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 12480,
+      "durationMs": 212,
+      "pitch": 81,
+      "velocity": 108
+    },
+    {
+      "lane": 1,
+      "startMs": 12720,
+      "durationMs": 177,
+      "pitch": 76,
+      "velocity": 84
+    },
+    {
+      "lane": 0,
+      "startMs": 12960,
+      "durationMs": 177,
+      "pitch": 72,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 13200,
+      "durationMs": 177,
+      "pitch": 76,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 13440,
+      "durationMs": 212,
+      "pitch": 77,
+      "velocity": 108
+    },
+    {
+      "lane": 2,
+      "startMs": 13680,
+      "durationMs": 177,
+      "pitch": 79,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 13920,
+      "durationMs": 177,
+      "pitch": 81,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 14160,
+      "durationMs": 177,
+      "pitch": 79,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 14400,
+      "durationMs": 212,
+      "pitch": 77,
+      "velocity": 108
+    },
+    {
+      "lane": 1,
+      "startMs": 14640,
+      "durationMs": 177,
+      "pitch": 76,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 14880,
+      "durationMs": 177,
+      "pitch": 74,
+      "velocity": 84
+    },
+    {
+      "lane": 0,
+      "startMs": 15120,
+      "durationMs": 177,
+      "pitch": 72,
+      "velocity": 84
+    },
+    {
+      "lane": 3,
+      "startMs": 15360,
+      "durationMs": 212,
+      "pitch": 84,
+      "velocity": 108
+    },
+    {
+      "lane": 3,
+      "startMs": 15600,
+      "durationMs": 177,
+      "pitch": 83,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 15840,
+      "durationMs": 177,
+      "pitch": 81,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 16080,
+      "durationMs": 177,
+      "pitch": 79,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 16320,
+      "durationMs": 212,
+      "pitch": 76,
+      "velocity": 108
+    },
+    {
+      "lane": 2,
+      "startMs": 16560,
+      "durationMs": 177,
+      "pitch": 79,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 16800,
+      "durationMs": 177,
+      "pitch": 81,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 17040,
+      "durationMs": 177,
+      "pitch": 79,
+      "velocity": 84
+    },
+    {
+      "lane": 3,
+      "startMs": 17280,
+      "durationMs": 212,
+      "pitch": 83,
+      "velocity": 108
+    },
+    {
+      "lane": 2,
+      "startMs": 17520,
+      "durationMs": 177,
+      "pitch": 81,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 17760,
+      "durationMs": 177,
+      "pitch": 79,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 18000,
+      "durationMs": 177,
+      "pitch": 74,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 18240,
+      "durationMs": 212,
+      "pitch": 79,
+      "velocity": 108
+    },
+    {
+      "lane": 2,
+      "startMs": 18480,
+      "durationMs": 177,
+      "pitch": 81,
+      "velocity": 84
+    },
+    {
+      "lane": 3,
+      "startMs": 18720,
+      "durationMs": 177,
+      "pitch": 83,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 18960,
+      "durationMs": 177,
+      "pitch": 79,
+      "velocity": 84
+    },
+    {
+      "lane": 3,
+      "startMs": 19200,
+      "durationMs": 212,
+      "pitch": 84,
+      "velocity": 108
+    },
+    {
+      "lane": 3,
+      "startMs": 19440,
+      "durationMs": 177,
+      "pitch": 84,
+      "velocity": 84
+    },
+    {
+      "lane": 3,
+      "startMs": 19680,
+      "durationMs": 177,
+      "pitch": 83,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 19920,
+      "durationMs": 177,
+      "pitch": 81,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 20160,
+      "durationMs": 212,
+      "pitch": 79,
+      "velocity": 108
+    },
+    {
+      "lane": 1,
+      "startMs": 20400,
+      "durationMs": 177,
+      "pitch": 76,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 20640,
+      "durationMs": 177,
+      "pitch": 81,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 20880,
+      "durationMs": 177,
+      "pitch": 79,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 21120,
+      "durationMs": 212,
+      "pitch": 81,
+      "velocity": 108
+    },
+    {
+      "lane": 2,
+      "startMs": 21360,
+      "durationMs": 177,
+      "pitch": 79,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 21600,
+      "durationMs": 177,
+      "pitch": 77,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 21840,
+      "durationMs": 177,
+      "pitch": 76,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 22080,
+      "durationMs": 212,
+      "pitch": 77,
+      "velocity": 108
+    },
+    {
+      "lane": 2,
+      "startMs": 22320,
+      "durationMs": 177,
+      "pitch": 79,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 22560,
+      "durationMs": 177,
+      "pitch": 76,
+      "velocity": 84
+    },
+    {
+      "lane": 0,
+      "startMs": 22800,
+      "durationMs": 177,
+      "pitch": 72,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 23040,
+      "durationMs": 212,
+      "pitch": 76,
+      "velocity": 108
+    },
+    {
+      "lane": 2,
+      "startMs": 23280,
+      "durationMs": 177,
+      "pitch": 79,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 23520,
+      "durationMs": 177,
+      "pitch": 81,
+      "velocity": 84
+    },
+    {
+      "lane": 3,
+      "startMs": 23760,
+      "durationMs": 177,
+      "pitch": 84,
+      "velocity": 84
+    },
+    {
+      "lane": 3,
+      "startMs": 24000,
+      "durationMs": 212,
+      "pitch": 83,
+      "velocity": 108
+    },
+    {
+      "lane": 2,
+      "startMs": 24240,
+      "durationMs": 177,
+      "pitch": 81,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 24480,
+      "durationMs": 177,
+      "pitch": 79,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 24720,
+      "durationMs": 177,
+      "pitch": 76,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 24960,
+      "durationMs": 212,
+      "pitch": 79,
+      "velocity": 108
+    },
+    {
+      "lane": 3,
+      "startMs": 25200,
+      "durationMs": 177,
+      "pitch": 83,
+      "velocity": 84
+    },
+    {
+      "lane": 3,
+      "startMs": 25440,
+      "durationMs": 177,
+      "pitch": 86,
+      "velocity": 84
+    },
+    {
+      "lane": 3,
+      "startMs": 25680,
+      "durationMs": 177,
+      "pitch": 83,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 25920,
+      "durationMs": 212,
+      "pitch": 81,
+      "velocity": 108
+    },
+    {
+      "lane": 2,
+      "startMs": 26160,
+      "durationMs": 177,
+      "pitch": 79,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 26400,
+      "durationMs": 177,
+      "pitch": 74,
+      "velocity": 84
+    },
+    {
+      "lane": 0,
+      "startMs": 26640,
+      "durationMs": 177,
+      "pitch": 71,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 26880,
+      "durationMs": 212,
+      "pitch": 81,
+      "velocity": 108
+    },
+    {
+      "lane": 3,
+      "startMs": 27120,
+      "durationMs": 177,
+      "pitch": 84,
+      "velocity": 84
+    },
+    {
+      "lane": 3,
+      "startMs": 27360,
+      "durationMs": 177,
+      "pitch": 83,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 27600,
+      "durationMs": 177,
+      "pitch": 81,
+      "velocity": 84
+    },
+    {
+      "lane": 2,
+      "startMs": 27840,
+      "durationMs": 212,
+      "pitch": 79,
+      "velocity": 108
+    },
+    {
+      "lane": 1,
+      "startMs": 28080,
+      "durationMs": 177,
+      "pitch": 76,
+      "velocity": 84
+    },
+    {
+      "lane": 0,
+      "startMs": 28320,
+      "durationMs": 177,
+      "pitch": 72,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 28560,
+      "durationMs": 177,
+      "pitch": 76,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 28800,
+      "durationMs": 212,
+      "pitch": 77,
+      "velocity": 108
+    },
+    {
+      "lane": 1,
+      "startMs": 29040,
+      "durationMs": 177,
+      "pitch": 76,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 29280,
+      "durationMs": 177,
+      "pitch": 74,
+      "velocity": 84
+    },
+    {
+      "lane": 0,
+      "startMs": 29520,
+      "durationMs": 177,
+      "pitch": 72,
+      "velocity": 84
+    },
+    {
+      "lane": 1,
+      "startMs": 29760,
+      "durationMs": 212,
+      "pitch": 76,
+      "velocity": 108
+    },
+    {
+      "lane": 1,
+      "startMs": 30000,
+      "durationMs": 177,
+      "pitch": 74,
+      "velocity": 84
+    },
+    {
+      "lane": 0,
+      "startMs": 30240,
+      "durationMs": 177,
+      "pitch": 72,
+      "velocity": 84
+    },
+    {
+      "lane": 0,
+      "startMs": 30480,
+      "durationMs": 177,
+      "pitch": 72,
+      "velocity": 84
+    }
+  ]
+}
